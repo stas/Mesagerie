@@ -1,0 +1,8 @@
+ip: 86.107.52.231
+port: 7777
+db: mesagerie.sqlite3
+log: /tmp/mesagerie.log
+maxclients: 100
+filetransfer: true
+registration: true
+locale: ro_RO
