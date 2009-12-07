@@ -34,13 +34,12 @@ class Config extends Object{
             
             String[] l = ((String) source.get("locale")).split("_");
             Locale.setDefault(new Locale(l[0], l[1]));
-            System.out.println(i18n._("Configuration file loaded."));
+            System.out.println(i18n._("CONFIGURATION_FILE_LOADED."));
         }
         else {
-            System.out.println("Configuration file doesn't exist.");
+            System.out.println("CONFIGURATION_FILE_DOESN'T_EXIST.");
             System.exit(1);
         }
-            System.out.println(Locale.getDefault());
     }
 
     public Object get(String field) {

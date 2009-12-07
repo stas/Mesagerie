@@ -4,6 +4,6 @@
  */
 class Mesagerie {
     Mesagerie(Config Conf) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        System.out.println(i18n._("TODO"));
     }
 }
