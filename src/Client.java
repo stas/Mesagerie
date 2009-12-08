@@ -41,6 +41,7 @@ class Client extends Thread {
         String line = " ";
         try {
             while(line != null) {//Otherwise you'll need horse powers to stop it
+                // TODO
                 line = in.readLine();
                 if(line != null)
                     logger.log( //Something to show up the results... tmp
