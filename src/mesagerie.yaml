@@ -1,6 +1,6 @@
 ip: 86.107.52.231
 port: 7777
-db: mesagerie.sqlite3
+db: /tmp/mesagerie.sqlite3
 log: /tmp/mesagerie.log
 maxclients: 3
 filetransfer: true

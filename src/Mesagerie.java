@@ -13,7 +13,7 @@ class Mesagerie extends Thread {
     protected InetAddress ip;
     protected int port = 7777;
     protected ServerSocket socket;
-    protected String db = "mesagerie.sqlite3";
+    protected String db = "/tmp/mesagerie.sqlite3";
     protected Integer maxclients = 1;
     protected Logger logger;
 
