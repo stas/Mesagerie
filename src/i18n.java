@@ -8,6 +8,8 @@ public class i18n {
     private static ResourceBundle catalog = ResourceBundle.getBundle("Mesagerie");
 
     public static String _(String s) {
-        return catalog.getString(s);
+        if(catalog.getString(s) != null)
+            return catalog.getString(s);
+        else return s;
     }
 }

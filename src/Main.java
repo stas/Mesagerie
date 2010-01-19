@@ -6,6 +6,7 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import org.tmatesoft.sqljet.core.SqlJetException;
 
 /**
  * Starter for server
@@ -40,6 +41,12 @@ public class Main {
         }
 
         logger.log(Level.INFO, i18n._("CONFIGURATION_FILE_LOADED"));
-        new Mesagerie(Conf, logger);
+        try {
+            new Mesagerie(Conf, logger);
+        } catch (SqlJetException ex) {
+            logger.log(Level.SEVERE, ex.getLocalizedMessage());
+        } catch (IOException ex) {
+            logger.log(Level.SEVERE, ex.getLocalizedMessage());
+        }
     }
 }

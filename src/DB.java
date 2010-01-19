@@ -1,6 +1,9 @@
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.tmatesoft.sqljet.core.SqlJetException;
 import org.tmatesoft.sqljet.core.SqlJetTransactionMode;
 import org.tmatesoft.sqljet.core.table.ISqlJetCursor;
@@ -13,6 +16,7 @@ import org.tmatesoft.sqljet.core.table.SqlJetDb;
  * @author stas
  */
 public class DB {
+    private static final int version = 3;
     private static final String users_table = "users";
     private static final String users_index = "users_index";
     private static final String username_field = "username";
@@ -22,27 +26,26 @@ public class DB {
     private static final String loggedin_field = "online";
     private static Boolean new_db_flag = false;
     private static SqlJetDb db;
+    private Logger logger;
 
-    private static void main(String file) throws SqlJetException {
+    DB(String file, Logger l) throws SqlJetException, IOException {
         File db_file = new File(file);
+        logger = l;
 
-        if(!db_file.exists())
+        if(!db_file.exists()) {
+            //db_file.createNewFile();
             new_db_flag = true;
-
+        }
         // Start SQLite driver
         db = new SqlJetDb(db_file, true);
-        db.getOptions().setAutovacuum(true);
-        db.runTransaction(new ISqlJetTransaction() {
-            public Object run(SqlJetDb db) throws SqlJetException {
-                db.getOptions().setUserVersion(3);
-                return true;
-            }
-        }, SqlJetTransactionMode.WRITE);
+        db.open();
         // Creare schema bd-ului
-        if(new_db_flag) {
+        if(new_db_flag == true) {
+            logger.log(Level.WARNING, i18n._("DATABASE_WILL_BE_CREATED"));
             db.beginTransaction(SqlJetTransactionMode.WRITE);
-            try {
-                db.createTable(
+            db.runWriteTransaction(new ISqlJetTransaction() {
+                public Object run(SqlJetDb db) throws SqlJetException {
+                    db.createTable(
                         "CREATE TABLE " + users_table
                         + " ( id INTEGER PRIMARY KEY AUTOINCREMENT, "
                         + username_field + " TEXT NOT NULL UNIQUE, "
@@ -51,27 +54,36 @@ public class DB {
                         + loggedin_field + " BOOLEAN DEFAULT 0 ), "
                         + password_field + " TEXT NOT NULL ) ;"
                         );
-                db.createIndex(
+                    db.createIndex(
                         "CREATE INDEX " + users_index + " ON "
                         + users_table + " (" + username_field + ");"
                         );
-            } finally {
-                db.commit();
-            }
+                    db.getOptions().setUserVersion(version);
+                    db.commit();
+                    return null;
+                }
+            });
         }
     }
 
+    public void disconnect() throws SqlJetException {
+        db.close();
+    }
+
     public void registerUser(final String u, final String n, final String e, final String p) throws SqlJetException {
+        db.beginTransaction(SqlJetTransactionMode.WRITE);
         db.runWriteTransaction(new ISqlJetTransaction() {
             public Object run(SqlJetDb db) throws SqlJetException {
-                return db.getTable(users_table).insert(u, n, e, p);
+                return db.getTable(users_table).insert(null, u, n, e, p);
             }
 	});
+        db.commit();
     }
 
     public void changeUserPassword(final String u, String p) throws SqlJetException {
         final Map<String, Object> values = new HashMap<String, Object>();
         values.put(password_field, p);
+        db.beginTransaction(SqlJetTransactionMode.WRITE);
         db.runWriteTransaction(new ISqlJetTransaction() {
             public Object run(SqlJetDb db) throws SqlJetException {
                 ISqlJetTable t = db.getTable(users_table);
@@ -86,11 +98,13 @@ public class DB {
                 return null;
             }
         });
+        db.commit();
     }
 
     public void offlineUser(final String u) throws SqlJetException {
         final Map<String, Object> values = new HashMap<String, Object>();
         values.put(loggedin_field, 0); // marcheaza utilizatorul ca offline
+        db.beginTransaction(SqlJetTransactionMode.WRITE);
         db.runWriteTransaction(new ISqlJetTransaction() {
             public Object run(SqlJetDb db) throws SqlJetException {
                 ISqlJetTable t = db.getTable(users_table);
@@ -105,11 +119,13 @@ public class DB {
                 return null;
             }
         });
+        db.commit();
     }
 
     public void onlineUser(final String u) throws SqlJetException {
         final Map<String, Object> values = new HashMap<String, Object>();
         values.put(loggedin_field, 1); // marcheaza utilizatorul ca online
+        db.beginTransaction(SqlJetTransactionMode.WRITE);
         db.runWriteTransaction(new ISqlJetTransaction() {
             public Object run(SqlJetDb db) throws SqlJetException {
                 ISqlJetTable t = db.getTable(users_table);
@@ -124,6 +140,7 @@ public class DB {
                 return null;
             }
         });
+        db.commit();
     }
 
     public void changeEmail(final String u, String e) throws SqlJetException {
