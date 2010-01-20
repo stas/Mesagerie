@@ -10,7 +10,6 @@ import org.tmatesoft.sqljet.core.table.ISqlJetCursor;
 import org.tmatesoft.sqljet.core.table.ISqlJetTable;
 import org.tmatesoft.sqljet.core.table.ISqlJetTransaction;
 import org.tmatesoft.sqljet.core.table.SqlJetDb;
-import sun.swing.PrintColorUIResource;
 
 /**
  * Main DB controller class
@@ -49,8 +48,7 @@ public class DB {
                 public Object run(SqlJetDb db) throws SqlJetException {
                     db.createTable(
                         "CREATE TABLE " + users_table
-                        + " ( id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                        + username_field + " TEXT NOT NULL UNIQUE, "
+                        + "(" + username_field + " TEXT NOT NULL PRIMARY KEY, "
                         + name_field + " TEXT NOT NULL, "
                         + email_field + " TEXT NOT NULL UNIQUE, "
                         + loggedin_field + " BOOLEAN DEFAULT 0, "
@@ -77,7 +75,7 @@ public class DB {
             db.beginTransaction(SqlJetTransactionMode.WRITE);
         db.runWriteTransaction(new ISqlJetTransaction() {
             public Object run(SqlJetDb db) throws SqlJetException {
-                return db.getTable(users_table).insert(null, u, n, e, null, p);
+                return db.getTable(users_table).insert(u, n, e, null, p);
             }
 	});
         db.commit();
@@ -128,16 +126,24 @@ public class DB {
     }
 
     public dbUser identifyUser(final String u, String p) throws SqlJetException {
-        dbUser user;
         if(!db.isInTransaction())
             db.beginTransaction(SqlJetTransactionMode.WRITE);
-        ISqlJetTable t = db.getTable(users_table);
-        ISqlJetCursor c = t.lookup(t.getPrimaryKeyIndexName(), u);
-        user = new dbUser(c);
-        c.close();
-        db.commit();
-        System.out.println(user.username + "/" + u + "|" + user.password);
-        return user;
+        
+        return (dbUser) db.runReadTransaction(new ISqlJetTransaction() {
+            public Object run(SqlJetDb arg0) throws SqlJetException {
+                ISqlJetTable t = db.getTable(users_table);
+                ISqlJetCursor c = t.lookup(t.getPrimaryKeyIndexName(), u);
+                try {
+                    if(!c.eof()) {
+                        dbUser user = new dbUser(c);
+                        return user;
+                    }
+                } finally {
+                c.close();
+                }
+                return  null;
+            }
+        });
     }
 
     public void onlineUser(final String u) throws SqlJetException {

@@ -5,7 +5,6 @@ import org.tmatesoft.sqljet.core.table.ISqlJetCursor;
  * @author stas
  */
 public class dbUser {
-    public Integer id;
     public String username;
     public String name;
     public String email;
@@ -16,7 +15,6 @@ public class dbUser {
     }
 
     public dbUser(ISqlJetCursor c) throws SqlJetException {
-        this.id = Integer.getInteger(c.getString("id"));
         this.username = c.getString("username");
         this.name = c.getString("name");
         this.email = c.getString("email");

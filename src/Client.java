@@ -12,6 +12,7 @@ import org.tmatesoft.sqljet.core.SqlJetException;
  * @author stas
  */
 class Client extends Thread {
+    protected Mesagerie server;
     protected Socket socket;
     protected BufferedReader in;
     protected PrintStream out;
@@ -26,7 +27,8 @@ class Client extends Thread {
     protected String failureResponse = "FAIL";
     protected String serverName = "Mesagerie ";
 
-    public Client(Socket client, DB dbcon, Boolean ar, Logger l) {
+    public Client(Mesagerie s, Socket client, DB dbcon, Boolean ar, Logger l) {
+        server = s;
         socket = client;
         db = dbcon;
         allow_registration = ar;
@@ -57,13 +59,14 @@ class Client extends Thread {
             if(line != null) {
                 if (this.getCmd(line.toUpperCase()).equals("LOGIN")) {
                     args = getArgs(line);
+                    
                     try {
                         user = db.identifyUser(args[0].toLowerCase(), args[1]);
                         logger.log(Level.INFO, i18n._("IDENTIFIED") + " " + args[0]);
                     } catch (SqlJetException ex) {
                         logger.log(Level.SEVERE, i18n._("IDENTIFICATION_FAILED_FOR") + " " + args[0], ex);
                     }
-                    System.out.println(user.username + "=" + user.password);
+                    
                     if(user.username.equals(args[0]) && user.password.equals(args[1])) {
                         user.loggedin = true;
                         this.send(okResponse);
@@ -83,6 +86,8 @@ class Client extends Thread {
                     this.send(okResponse);
                 } else if (this.getCmd(line.toUpperCase()).equals("LOGOUT")) {
                     exit = true;
+                } else if (this.getCmd(line.toUpperCase()).equals("HELP")) {
+                    this.send(this.helpMsg());
                 }
             }
 
@@ -93,12 +98,15 @@ class Client extends Thread {
                     cmd = this.getCmd(line.toUpperCase());
                     switch(Command.valueOf(cmd)) {
                         case MSG :
-                            this.send(user.name + ": " + this.getArgs(line)[0]);
+                            server.transmit(
+                                    responseKeyword + serverName +
+                                    user.name.replace(" ", ".") + ": " + this.getArgs(line)[0]
+                            );
                             break; //msg
                         case LOGOUT : 
                             exit = true;
                             line = null;
-                            break; //logout //logout
+                            break; //logout
                         default: line = null; break;
                     }
                 }
@@ -149,5 +157,9 @@ class Client extends Thread {
             args = line.split(" ");
         }
         return args;
+    }
+
+    private String helpMsg() {
+        return i18n._("HELPMSG");
     }
 }

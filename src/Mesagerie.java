@@ -1,7 +1,10 @@
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Enumeration;
+import java.util.Hashtable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.tmatesoft.sqljet.core.SqlJetException;
@@ -19,6 +22,7 @@ class Mesagerie extends Thread {
     protected Boolean allow_registration = false;
     protected Logger logger;
     protected DB dbcon;
+    protected final Hashtable client_streams = new Hashtable();
 
     Mesagerie(Config Conf, Logger l) throws SqlJetException, IOException {
         dbcon = new DB(Conf.db, l);
@@ -66,7 +70,9 @@ class Mesagerie extends Thread {
                 clients = Client.activeCount() + 1; // dont count from 0
                 Socket client = socket.accept();
                 if(clients - started <= maxclients) {
-                    Client c = new Client(client, dbcon, allow_registration, logger);
+                    Client c = new Client(this, client, dbcon, allow_registration, logger);
+                    DataOutputStream client_os = new DataOutputStream(client.getOutputStream());
+                    client_streams.put(client, client_os);
                 }
                 else {
                     logger.log(
@@ -94,6 +100,29 @@ class Mesagerie extends Thread {
             } catch (SqlJetException ex) {
                 logger.log(Level.SEVERE, ex.getLocalizedMessage());
             }
+        }
+    }
+
+    private Enumeration getClientStreams() {
+        return client_streams.elements();
+    }
+
+    public void transmit(String msg) throws IOException {
+        synchronized(client_streams) {
+            for (Enumeration e = getClientStreams(); e.hasMoreElements();) {
+                DataOutputStream dos = (DataOutputStream) e.nextElement();
+                dos.writeUTF(msg);
+            }
+        }
+    }
+
+    void removeClientStream(Socket s) {
+        synchronized(client_streams) {
+            logger.log(
+                    Level.INFO,
+                    i18n._("REMOVING_STREAM") + ": " + s.getRemoteSocketAddress().toString()
+            );
+            client_streams.remove(s);
         }
     }
 }
