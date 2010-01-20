@@ -1,4 +1,4 @@
-ip: 192.168.1.33
+ip: 127.0.0.1
 port: 9000
 db: /tmp/mesagerie.sqlite
 log: /tmp/mesagerie.log
