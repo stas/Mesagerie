@@ -108,7 +108,7 @@ class Client extends Thread {
                             exit = true;
                             line = null;
                             break; //logout
-                        default: line = null; break;
+                        default: this.send(i18n._("UNKNOWN_COMMAND")); line = null; break;
                     }
                 }
             }
@@ -140,8 +140,23 @@ class Client extends Thread {
     }
 
     private String getCmd(String line) {
+        String[] allowedCmds = {
+            "MSG", "REGISTER", "LOGOUT", "HELP", "LOGIN"
+        };
+        String ourCmd;
+        Boolean found = false;
         String[] c = line.split(" ");
-        return new StringBuffer(c[0]).delete(0, 1).toString(); //remove the slash
+        ourCmd = new StringBuffer(c[0]).delete(0, 1).toString(); //remove the slash
+        // Check for unallowed commands
+        for (int i = 0; i < allowedCmds.length && found != true; i++) {
+            if(allowedCmds[i].equalsIgnoreCase(ourCmd) )
+                found = true;
+        }
+
+        if(found)
+            return ourCmd;
+        else
+            return "NILL";
     }
 
     private String[] getArgs(String line) {
