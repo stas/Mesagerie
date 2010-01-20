@@ -16,6 +16,7 @@ class Mesagerie extends Thread {
     protected ServerSocket socket;
     protected String db = "/tmp/mesagerie.sqlite3";
     protected Integer maxclients = 1;
+    protected Boolean allow_registration = false;
     protected Logger logger;
     protected DB dbcon;
 
@@ -34,6 +35,9 @@ class Mesagerie extends Thread {
 
         if((Integer) Conf.get("maxclients") > 1)
             maxclients = (Integer) Conf.get("maxclients");
+
+        if(Conf.get("registration") != null)
+            allow_registration = (Boolean) Conf.get("registration");
 
         try {
             if(!ip.toString().isEmpty())
@@ -62,7 +66,7 @@ class Mesagerie extends Thread {
                 clients = Client.activeCount() + 1; // dont count from 0
                 Socket client = socket.accept();
                 if(clients - started <= maxclients) {
-                    Client c = new Client(client, dbcon, logger);
+                    Client c = new Client(client, dbcon, allow_registration, logger);
                 }
                 else {
                     logger.log(

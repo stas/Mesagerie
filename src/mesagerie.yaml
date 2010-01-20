@@ -1,8 +1,8 @@
-ip: 127.0.0.1
-port: 7777
+ip: 192.168.1.33
+port: 9000
 db: /tmp/mesagerie.sqlite
 log: /tmp/mesagerie.log
-maxclients: 3
-filetransfer: true
+maxclients: 5
+filetransfer: false
 registration: true
 locale: ro_RO

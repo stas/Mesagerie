@@ -3,7 +3,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
-import java.util.Map;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import org.tmatesoft.sqljet.core.SqlJetException;
@@ -19,18 +18,21 @@ class Client extends Thread {
     protected Logger logger;
     protected String remote;
     protected Boolean exit = false;
+    protected Boolean allow_registration;
     protected DB db;
     protected dbUser user = null;
     protected String responseKeyword = "/reply ";
     protected String okResponse = "OK";
     protected String failureResponse = "FAIL";
+    protected String serverName = "Mesagerie ";
 
-    public Client(Socket client, DB dbcon, Logger l) {
+    public Client(Socket client, DB dbcon, Boolean ar, Logger l) {
         socket = client;
         db = dbcon;
+        allow_registration = ar;
         logger = l;
         remote = socket.getRemoteSocketAddress().toString();
-        logger.log(Level.INFO, i18n._("CONNECTED") + remote);
+        logger.log(Level.INFO, i18n._("CONNECTED") + " " + remote);
         
         try {
             // socket.readline() is deprecated as of JDK 1.1
@@ -49,34 +51,54 @@ class Client extends Thread {
     public void run(){
         String line;
         String cmd;
+        String[] args;
         try {
             line = in.readLine();
             if(line != null) {
                 if (this.getCmd(line.toUpperCase()).equals("LOGIN")) {
-                    return;
-                } else if (this.getCmd(line.toUpperCase()).equals("REGISTER")) {
-                    String[] args = getArgs(line);
+                    args = getArgs(line);
+                    try {
+                        user = db.identifyUser(args[0].toLowerCase(), args[1]);
+                        logger.log(Level.INFO, i18n._("IDENTIFIED") + " " + args[0]);
+                    } catch (SqlJetException ex) {
+                        logger.log(Level.SEVERE, i18n._("IDENTIFICATION_FAILED_FOR") + " " + args[0], ex);
+                    }
+                    System.out.println(user.username + "=" + user.password);
+                    if(user.username.equals(args[0]) && user.password.equals(args[1])) {
+                        user.loggedin = true;
+                        this.send(okResponse);
+                    } else {
+                        this.send(failureResponse);
+                        line = null;
+                    }
+                    line = "/msg " + user.name + " " + i18n._("LOGGEDIN"); //null means disconnection
+                } else if (this.getCmd(line.toUpperCase()).equals("REGISTER") && this.allow_registration) {
+                    args = getArgs(line);
                     try {
                         db.registerUser(args[0].toLowerCase(), args[1].replace(".", " "), args[2].toLowerCase(), args[3]);
-                        logger.log(Level.INFO, i18n._("NEW_REGISTRATION") + args[0]);
+                        logger.log(Level.INFO, i18n._("NEW_REGISTRATION") + " " + args[0]);
                     } catch (SqlJetException ex) {
-                        logger.log(Level.SEVERE, i18n._("REGISTRATION_FAILED_FOR") + args[0], ex);
+                        logger.log(Level.SEVERE, i18n._("REGISTRATION_FAILED_FOR") + " " + args[0], ex);
                     }
-                    this.send(responseKeyword + okResponse);
+                    this.send(okResponse);
                 } else if (this.getCmd(line.toUpperCase()).equals("LOGOUT")) {
                     exit = true;
                 }
             }
 
             if(exit != true && user != null && user.loggedin == true) {
-                line = in.readLine();
                 while(line != null) {//Otherwise you'll need horse powers to stop it
                     // TODO
                     line = in.readLine();
                     cmd = this.getCmd(line.toUpperCase());
                     switch(Command.valueOf(cmd)) {
-                        case MSG : logger.log(Level.INFO, "msg"); break; //msg
-                        case LOGOUT : exit = true; break; //logout
+                        case MSG :
+                            this.send(user.name + ": " + this.getArgs(line)[0]);
+                            break; //msg
+                        case LOGOUT : 
+                            exit = true;
+                            line = null;
+                            break; //logout //logout
                         default: line = null; break;
                     }
                 }
@@ -90,9 +112,9 @@ class Client extends Thread {
         }
         
         if(exit)
-            this.send(responseKeyword + i18n._("DISCONNECTED_OR_NOT_LOGGEDIN"));
+            this.send(i18n._("DISCONNECTED_OR_NOT_LOGGEDIN"));
 
-        logger.log(Level.INFO, i18n._("DISCONNECTED") + remote);
+        logger.log(Level.INFO, i18n._("DISCONNECTED") + " " + remote);
         
         try {
             in.close();
@@ -104,7 +126,7 @@ class Client extends Thread {
     }
 
     private void send(String s) {
-        out.println(s);
+        out.println(responseKeyword + serverName + s);
     }
 
     private String getCmd(String line) {
@@ -113,7 +135,7 @@ class Client extends Thread {
     }
 
     private String[] getArgs(String line) {
-        String[] args = null;
+        String[] args = {""};
         String[] c = line.split(" ");
         line = new StringBuffer(line).delete(0, c[0].length()+1).toString(); // remove keyword
         String cmd = new StringBuffer(c[0]).delete(0, 1).toString();
@@ -121,6 +143,9 @@ class Client extends Thread {
             args[0] = line;
         }
         else if (cmd.toUpperCase().equals("REGISTER")) {
+            args = line.split(" ");
+        }
+        else if (cmd.toUpperCase().equals("LOGIN")) {
             args = line.split(" ");
         }
         return args;

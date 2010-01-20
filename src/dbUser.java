@@ -16,13 +16,12 @@ public class dbUser {
     }
 
     public dbUser(ISqlJetCursor c) throws SqlJetException {
-        Long i = c.getInteger("id");
-        this.id = i.intValue();
+        this.id = Integer.getInteger(c.getString("id"));
         this.username = c.getString("username");
         this.name = c.getString("name");
         this.email = c.getString("email");
         this.password = c.getString("password");
-        this.loggedin = c.getBoolean("loggedin");
+        this.loggedin = c.getBoolean("online");
     }
 
     public void create(String username, String name, String email, String password) {

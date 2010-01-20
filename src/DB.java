@@ -10,6 +10,7 @@ import org.tmatesoft.sqljet.core.table.ISqlJetCursor;
 import org.tmatesoft.sqljet.core.table.ISqlJetTable;
 import org.tmatesoft.sqljet.core.table.ISqlJetTransaction;
 import org.tmatesoft.sqljet.core.table.SqlJetDb;
+import sun.swing.PrintColorUIResource;
 
 /**
  * Main DB controller class
@@ -42,7 +43,8 @@ public class DB {
         // Creare schema bd-ului
         if(new_db_flag == true) {
             logger.log(Level.WARNING, i18n._("DATABASE_WILL_BE_CREATED"));
-            db.beginTransaction(SqlJetTransactionMode.WRITE);
+            if(!db.isInTransaction())
+                db.beginTransaction(SqlJetTransactionMode.WRITE);
             db.runWriteTransaction(new ISqlJetTransaction() {
                 public Object run(SqlJetDb db) throws SqlJetException {
                     db.createTable(
@@ -51,7 +53,7 @@ public class DB {
                         + username_field + " TEXT NOT NULL UNIQUE, "
                         + name_field + " TEXT NOT NULL, "
                         + email_field + " TEXT NOT NULL UNIQUE, "
-                        + loggedin_field + " BOOLEAN DEFAULT 0 ), "
+                        + loggedin_field + " BOOLEAN DEFAULT 0, "
                         + password_field + " TEXT NOT NULL ) ;"
                         );
                     db.createIndex(
@@ -71,10 +73,11 @@ public class DB {
     }
 
     public void registerUser(final String u, final String n, final String e, final String p) throws SqlJetException {
-        db.beginTransaction(SqlJetTransactionMode.WRITE);
+        if(!db.isInTransaction())
+            db.beginTransaction(SqlJetTransactionMode.WRITE);
         db.runWriteTransaction(new ISqlJetTransaction() {
             public Object run(SqlJetDb db) throws SqlJetException {
-                return db.getTable(users_table).insert(null, u, n, e, p);
+                return db.getTable(users_table).insert(null, u, n, e, null, p);
             }
 	});
         db.commit();
@@ -83,7 +86,8 @@ public class DB {
     public void changeUserPassword(final String u, String p) throws SqlJetException {
         final Map<String, Object> values = new HashMap<String, Object>();
         values.put(password_field, p);
-        db.beginTransaction(SqlJetTransactionMode.WRITE);
+        if(!db.isInTransaction())
+            db.beginTransaction(SqlJetTransactionMode.WRITE);
         db.runWriteTransaction(new ISqlJetTransaction() {
             public Object run(SqlJetDb db) throws SqlJetException {
                 ISqlJetTable t = db.getTable(users_table);
@@ -104,7 +108,8 @@ public class DB {
     public void offlineUser(final String u) throws SqlJetException {
         final Map<String, Object> values = new HashMap<String, Object>();
         values.put(loggedin_field, 0); // marcheaza utilizatorul ca offline
-        db.beginTransaction(SqlJetTransactionMode.WRITE);
+        if(!db.isInTransaction())
+            db.beginTransaction(SqlJetTransactionMode.WRITE);
         db.runWriteTransaction(new ISqlJetTransaction() {
             public Object run(SqlJetDb db) throws SqlJetException {
                 ISqlJetTable t = db.getTable(users_table);
@@ -122,10 +127,24 @@ public class DB {
         db.commit();
     }
 
+    public dbUser identifyUser(final String u, String p) throws SqlJetException {
+        dbUser user;
+        if(!db.isInTransaction())
+            db.beginTransaction(SqlJetTransactionMode.WRITE);
+        ISqlJetTable t = db.getTable(users_table);
+        ISqlJetCursor c = t.lookup(t.getPrimaryKeyIndexName(), u);
+        user = new dbUser(c);
+        c.close();
+        db.commit();
+        System.out.println(user.username + "/" + u + "|" + user.password);
+        return user;
+    }
+
     public void onlineUser(final String u) throws SqlJetException {
         final Map<String, Object> values = new HashMap<String, Object>();
         values.put(loggedin_field, 1); // marcheaza utilizatorul ca online
-        db.beginTransaction(SqlJetTransactionMode.WRITE);
+        if(!db.isInTransaction())
+            db.beginTransaction(SqlJetTransactionMode.WRITE);
         db.runWriteTransaction(new ISqlJetTransaction() {
             public Object run(SqlJetDb db) throws SqlJetException {
                 ISqlJetTable t = db.getTable(users_table);
@@ -175,7 +194,7 @@ public class DB {
             users.put(c.getString(username_field), new dbUser(c));
             c.next();
         }
-        
+        c.close();
         return users;
     }
 
