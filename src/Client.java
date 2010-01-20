@@ -62,7 +62,6 @@ class Client extends Thread {
                     
                     try {
                         user = db.identifyUser(args[0].toLowerCase(), args[1]);
-                        logger.log(Level.INFO, i18n._("IDENTIFIED") + " " + args[0]);
                     } catch (SqlJetException ex) {
                         logger.log(Level.SEVERE, i18n._("IDENTIFICATION_FAILED_FOR") + " " + args[0], ex);
                     }
@@ -70,9 +69,11 @@ class Client extends Thread {
                     if(user.username.equals(args[0]) && user.password.equals(args[1])) {
                         user.loggedin = true;
                         this.send(okResponse);
+                        logger.log(Level.INFO, i18n._("IDENTIFIED") + " " + args[0]);
                     } else {
                         this.send(failureResponse);
                         line = null;
+                        logger.log(Level.SEVERE, i18n._("IDENTIFICATION_FAILED_FOR") + " " + args[0]);
                     }
                     line = "/msg " + user.name + " " + i18n._("LOGGEDIN"); //null means disconnection
                 } else if (this.getCmd(line.toUpperCase()).equals("REGISTER") && this.allow_registration) {
@@ -127,6 +128,7 @@ class Client extends Thread {
         try {
             in.close();
             out.close();
+            server.removeClientStream(socket);
             socket.close();
         } catch (IOException ex) {
             logger.log(Level.SEVERE, ex.getMessage());
