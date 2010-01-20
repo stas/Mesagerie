@@ -111,7 +111,7 @@ class Mesagerie extends Thread {
         synchronized(client_streams) {
             for (Enumeration e = getClientStreams(); e.hasMoreElements();) {
                 DataOutputStream dos = (DataOutputStream) e.nextElement();
-                dos.writeUTF(msg);
+                dos.writeUTF(msg + "\n");
             }
         }
     }
@@ -120,7 +120,7 @@ class Mesagerie extends Thread {
         synchronized(client_streams) {
             logger.log(
                     Level.INFO,
-                    i18n._("REMOVING_STREAM") + ": " + s.getRemoteSocketAddress().toString()
+                    i18n._("REMOVING_STREAM") + " " + s.getRemoteSocketAddress().toString()
             );
             client_streams.remove(s);
         }
